@@ -1,160 +1,232 @@
-<!DOCTYPE html><html lang="id">
+<!DOCTYPE html>
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perencana Perbaikan Strategis (PPS) Berbasis AI</title>
+    
+    <!-- Library Scripts - Dimuat di sini untuk memastikan ketersediaan -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"></script>
+
+    <!-- Custom Styles -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        #root { padding: 1rem; }
+        @media (min-width: 640px) { #root { padding: 1.5rem; } }
+        @media (min-width: 1024px) { #root { padding: 2rem; } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
     </style>
 </head>
 <body class="bg-slate-900 text-white font-sans">
-    <div id="root" class="p-4 sm:p-6 lg:p-8"></div><!-- Library Scripts -->
-<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<!-- Firebase Config (Replace with real config) -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <div id="root">
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+            <h2 class="text-2xl font-bold text-cyan-400">Memuat Aplikasi...</h2>
+            <p class="text-slate-400">Harap tunggu sebentar.</p>
+        </div>
+    </div>
 
-    const firebaseConfig = {
-      apiKey: "ISI_API_KEY",
-      authDomain: "project-id.firebaseapp.com",
-      projectId: "project-id",
-      storageBucket: "project-id.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdefgh"
-    };
-
-    try {
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        window.firebaseServices = { auth, db, onAuthStateChanged, signInAnonymously, doc, getDoc, setDoc };
-        window.isFirebaseConfigured = true;
-    } catch (e) {
-        console.error("Firebase initialization failed:", e);
-        window.isFirebaseConfigured = false;
-    }
-</script>
-
-<!-- React Application -->
-<script type="text/babel">
-    const { useState, useEffect, useCallback, useRef } = React;
-
-    const MessageModal = ({ message, type, onClose }) => {
-        if (!message) return null;
-        const bgColor = type === 'error' ? 'bg-red-800' : 'bg-blue-800';
-        const textColor = type === 'error' ? 'text-red-100' : 'text-blue-100';
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className={`rounded-lg shadow-xl p-6 border ${bgColor} max-w-sm w-full mx-auto animate-fade-in`}>
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className={`text-lg font-bold ${textColor}`}>Pesan</h3>
-                        <button onClick={onClose} className="text-white hover:text-gray-300">
-                            <i data-lucide="x-circle"></i>
-                        </button>
-                    </div>
-                    <p className={`text-sm ${textColor} mb-4`}>{message}</p>
-                    <div className="text-right">
-                        <button onClick={onClose} className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-500 transition-colors duration-200">Tutup</button>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    function App() {
-        const [apiKey, setApiKey] = useState('');
-        const [rawData, setRawData] = useState(null);
-        const [fileName, setFileName] = useState('');
-        const [isProcessingFile, setIsProcessingFile] = useState(false);
-        const [modalMessage, setModalMessage] = useState({ message: '', type: '' });
-        const [userId, setUserId] = useState(null);
-        const [isAuthReady, setIsAuthReady] = useState(false);
-
-        useEffect(() => {
-            lucide.createIcons();
-        });
-
-        useEffect(() => {
-            const checkFirebase = setInterval(() => {
-                if (window.isFirebaseConfigured && window.firebaseServices) {
-                    clearInterval(checkFirebase);
-                    const { auth, onAuthStateChanged, signInAnonymously } = window.firebaseServices;
-
-                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-                        if (user) setUserId(user.uid);
-                        else try { await signInAnonymously(auth); } catch (e) {
-                            setModalMessage({ message: `Gagal otentikasi Firebase: ${e.message}`, type: 'error' });
+    <!-- React Application Script -->
+    <script type="text/babel">
+        const { useState, useCallback, useEffect, useRef } = React;
+        
+        // Komponen Ikon
+        const Icon = ({ name, className, size = 24 }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (ref.current && window.lucide) {
+                    const iconNode = lucide.icons[name];
+                    if (iconNode) {
+                        ref.current.innerHTML = '';
+                        const svgElement = lucide.createIcons({ icons: [[name, {}]] })[0];
+                        if (svgElement) {
+                            svgElement.setAttribute('class', className || '');
+                            svgElement.setAttribute('width', size);
+                            svgElement.setAttribute('height', size);
+                            ref.current.appendChild(svgElement);
                         }
-                        setIsAuthReady(true);
-                    });
-                    return () => unsubscribe();
-                } else if (window.isFirebaseConfigured === false) {
-                    clearInterval(checkFirebase);
-                    setModalMessage({ message: "Konfigurasi Firebase salah atau gagal dimuat.", type: 'error' });
-                    setIsAuthReady(true);
+                    }
                 }
-            }, 100);
-        }, []);
-
-        const onDrop = useCallback((acceptedFiles) => {
-            const file = acceptedFiles[0];
-            if (!file) return;
-            if (!file.name.endsWith(".xlsx")) {
-                setModalMessage({ message: "Gunakan file .xlsx untuk hasil optimal", type: 'error' });
-                return;
-            }
-            setFileName(file.name);
-            setIsProcessingFile(true);
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const workbook = XLSX.read(event.target.result, { type: 'binary' });
-                    const sheet = workbook.SheetNames[0];
-                    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
-                    setRawData(data);
-                } catch (e) {
-                    setModalMessage({ message: `Gagal memproses file Excel: ${e.message}`, type: 'error' });
-                } finally {
-                    setIsProcessingFile(false);
-                }
-            };
-            reader.readAsBinaryString(file);
-        }, []);
-
-        const handleFileChange = (e) => {
-            if (e.target.files) onDrop(Array.from(e.target.files));
+            }, [name, className, size]);
+            return <span ref={ref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size }} />;
         };
 
-        return (
-            <div>
-                <MessageModal message={modalMessage.message} type={modalMessage.type} onClose={() => setModalMessage({ message: '', type: '' })} />
+        // Komponen Modal
+        const MessageModal = ({ message, type, onClose }) => {
+          if (!message) return null;
+          const bgColor = type === 'error' ? 'bg-red-800' : 'bg-blue-800';
+          const textColor = type === 'error' ? 'text-red-100' : 'text-blue-100';
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className={`rounded-lg shadow-xl p-6 border ${bgColor} max-w-sm w-full mx-auto animate-fade-in`}>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className={`text-lg font-bold ${textColor}`}>Pesan</h3>
+                    <button onClick={onClose} className="text-white hover:text-gray-300">
+                        <Icon name="x-circle" className="w-6 h-6" />
+                    </button>
+                </div>
+                <p className={`text-sm ${textColor} mb-4`}>{message}</p>
+                <div className="text-right">
+                    <button onClick={onClose} className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-500 transition-colors duration-200">Tutup</button>
+                </div>
+              </div>
+            </div>
+          );
+        };
+        
+        // Komponen Aplikasi Utama
+        function App() {
+            const [apiKey, setApiKey] = useState('');
+            const [rawData, setRawData] = useState(null);
+            const [groupedData, setGroupedData] = useState(null);
+            const [fileName, setFileName] = useState('');
+            const [isProcessingFile, setIsProcessingFile] = useState(false);
+            const [modalMessage, setModalMessage] = useState({ message: '', type: '' });
+            const [userId, setUserId] = useState(null);
+            const [isAuthReady, setIsAuthReady] = useState(false);
+            const [firebaseServices, setFirebaseServices] = useState(null);
+            
+            useEffect(() => {
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+            });
 
-                <header className="text-center mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-cyan-400">Rencana Perbaikan Akreditasi Berbasis AI</h1>
-                    <p className="text-slate-400 mt-2">Unggah file .xlsx, AI akan mengisi otomatis, lalu unduh hasilnya.</p>
-                </header>
+            useEffect(() => {
+                // Inisialisasi Firebase di sini, setelah komponen di-mount
+                try {
+                    // ==================================================================
+                    // === PENTING: GANTI SELURUH BLOK DI BAWAH INI DENGAN MILIK ANDA ===
+                    // ==================================================================
+                    // Salin konfigurasi dari dashboard Firebase Anda dan tempel di sini.
+                    const firebaseConfig = {
+                      apiKey: "GANTI_DENGAN_API_KEY_ANDA",
+                      authDomain: "GANTI_DENGAN_AUTH_DOMAIN_ANDA",
+                      projectId: "GANTI_DENGAN_PROJECT_ID_ANDA",
+                      storageBucket: "GANTI_DENGAN_STORAGE_BUCKET_ANDA",
+                      messagingSenderId: "GANTI_DENGAN_MESSAGING_SENDER_ID_ANDA",
+                      appId: "GANTI_DENGAN_APP_ID_ANDA"
+                    };
+                    // ==================================================================
+                    
+                    if (!firebase.apps.length) {
+                        const app = firebase.initializeApp(firebaseConfig);
+                        const auth = firebase.auth.getAuth(app);
+                        const db = firebase.firestore.getFirestore(app);
+                        
+                        const services = { 
+                            auth, 
+                            db, 
+                            onAuthStateChanged: firebase.auth.onAuthStateChanged, 
+                            signInAnonymously: firebase.auth.signInAnonymously
+                        };
+                        setFirebaseServices(services);
+                    } else {
+                        // Jika sudah ada, ambil instance yang ada
+                        const app = firebase.getApp();
+                        const auth = firebase.auth.getAuth(app);
+                        const db = firebase.firestore.getFirestore(app);
+                        const services = { auth, db, onAuthStateChanged: firebase.auth.onAuthStateChanged, signInAnonymously: firebase.auth.signInAnonymously };
+                        setFirebaseServices(services);
+                    }
 
-                {!isAuthReady ? (
+                } catch (e) {
+                   console.error("Firebase Gagal:", e.message);
+                   setModalMessage({ message: `Konfigurasi Firebase salah: ${e.message}`, type: 'error' });
+                   setIsAuthReady(true); // Tetap lanjutkan render meskipun gagal
+                }
+            }, []);
+
+            useEffect(() => {
+                if (!firebaseServices) {
+                    return;
+                };
+
+                const { auth, onAuthStateChanged, signInAnonymously } = firebaseServices;
+                const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        setUserId(user.uid);
+                    } else {
+                        try {
+                            await signInAnonymously(auth);
+                        } catch (authError) {
+                            setModalMessage({ message: `Gagal otentikasi: ${authError.message}`, type: 'error' });
+                        }
+                    }
+                    setIsAuthReady(true);
+                });
+                return () => unsubscribe();
+            }, [firebaseServices]);
+
+            const onDrop = useCallback((acceptedFiles) => {
+                const file = acceptedFiles[0];
+                if (!file) return;
+                setFileName(file.name);
+                setIsProcessingFile(true);
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const workbook = XLSX.read(event.target.result, { type: 'binary' });
+                        const sheetName = workbook.SheetNames[0];
+                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                        setRawData(jsonData);
+                        setGroupedData({ "File Diproses": { title: "File Diproses", items: jsonData } });
+                    } catch (e) {
+                        setModalMessage({ message: `Gagal memproses file Excel: ${e.message}`, type: 'error' });
+                    } finally {
+                        setIsProcessingFile(false);
+                    }
+                };
+                reader.readAsBinaryString(file);
+            }, []);
+
+            const handleFileChange = (e) => {
+                if (e.target.files) {
+                    onDrop(Array.from(e.target.files));
+                }
+            };
+
+            if (!isAuthReady) {
+                return (
                     <div className="text-center flex items-center justify-center gap-2">
-                        <i data-lucide="loader-circle" className="animate-spin"></i>
+                        <Icon name="loader-circle" className="animate-spin" />
                         <span>Menghubungkan ke layanan...</span>
                     </div>
-                ) : (
+                );
+            }
+
+            return (
+                <div>
+                    <MessageModal 
+                        message={modalMessage.message} 
+                        type={modalMessage.type} 
+                        onClose={() => setModalMessage({ message: '', type: '' })} 
+                    />
+                    <header className="text-center mb-8">
+                        <h1 className="text-3xl sm:text-4xl font-bold text-cyan-400">Rencana Perbaikan Akreditasi Berbasis AI</h1>
+                        <p className="text-slate-400 mt-2">Unggah file, AI akan mengisi keterangan, lalu unduh hasilnya.</p>
+                    </header>
+                    
                     <div>
                         <div className="bg-slate-800 rounded-xl p-6 mb-8 shadow-lg">
                             <p className="text-green-400 flex items-center gap-2">
-                                <i data-lucide="check-circle"></i>
+                                <Icon name="check-circle" />
                                 {userId ? `Terhubung! Sesi Anda aman.` : "Koneksi berhasil, menunggu autentikasi..."}
                             </p>
                         </div>
@@ -162,45 +234,40 @@
                             <label htmlFor="apiKey" className="block text-sm font-medium text-slate-300 mb-2">Kunci API Google AI</label>
                             <input id="apiKey" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Masukkan Kunci API Anda di sini..." className="w-full bg-slate-700 border rounded-md px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border-slate-600 focus:ring-cyan-500" />
                         </div>
-                        {!rawData && (
+                         {!groupedData && (
                             <div className="flex flex-col items-center justify-center gap-4">
                                 <div className="w-full p-10 border-2 border-dashed rounded-xl transition-all duration-300 cursor-pointer hover:border-cyan-500 hover:bg-slate-800 border-slate-600">
-                                    <input type="file" accept=".xlsx" onChange={handleFileChange} className="hidden" id="file-upload" />
+                                    <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} className="hidden" id="file-upload" />
                                     <label htmlFor="file-upload" className="flex flex-col items-center justify-center text-center cursor-pointer">
                                         {isProcessingFile ? (
-                                            <>
-                                                <i data-lucide="loader-circle" className="w-12 h-12 text-cyan-500 mb-4 animate-spin"></i>
+                                            <React.Fragment>
+                                                <Icon name="loader-circle" className="w-12 h-12 text-cyan-500 mb-4 animate-spin" />
                                                 <p className="text-lg font-semibold text-slate-300">Memproses file...</p>
-                                            </>
+                                            </React.Fragment>
                                         ) : (
-                                            <>
-                                                <i data-lucide="upload-cloud" className="w-12 h-12 text-slate-500 mb-4"></i>
+                                            <React.Fragment>
+                                                <Icon name="upload-cloud" className="w-12 h-12 text-slate-500 mb-4" />
                                                 <p className="text-lg font-semibold text-slate-300">Klik untuk mengunggah file .xlsx</p>
-                                            </>
+                                            </React.Fragment>
                                         )}
                                     </label>
                                 </div>
                             </div>
                         )}
-                        {rawData && (
-                            <div className="text-green-400 p-4 bg-slate-800 rounded-lg">
-                                File "{fileName}" berhasil diproses!
-                                <div className="mt-4 text-right">
-                                    <button className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded">
-                                        Gunakan AI untuk Menyusun
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                        {groupedData && <div className="text-green-400 p-4 bg-slate-800 rounded-lg">File "{fileName}" berhasil diproses! Silakan lanjutkan dengan fitur AI.</div>}
                     </div>
-                )}
-            </div>
-        );
-    }
+                </div>
+            );
+        }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-</script>
-
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        
+        // Pastikan semua library global sudah ada sebelum merender aplikasi
+        if (window.React && window.ReactDOM && window.lucide && window.firebase) {
+            root.render(<App />);
+        } else {
+            root.render(<h2>Gagal memuat library penting. Harap segarkan halaman.</h2>);
+        }
+    </script>
 </body>
 </html>
