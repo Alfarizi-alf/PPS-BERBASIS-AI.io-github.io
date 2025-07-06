@@ -32,19 +32,21 @@
     <!-- Firebase Libraries (Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // ==================================================================
-        // === KONFIGURASI FIREBASE ANDA YANG BENAR SUDAH ADA DI SINI ===
+        // === PENTING: GANTI SELURUH BLOK DI BAWAH INI DENGAN MILIK ANDA ===
         // ==================================================================
+        // Konfigurasi ini HANYA CONTOH dan TIDAK AKAN BEKERJA.
+        // Salin konfigurasi dari dashboard Firebase Anda dan tempel di sini.
         const firebaseConfig = {
-          apiKey: "AIzaSyDV5gBwoPknVDX5-mAX75Fr717n20jXDAk",
-          authDomain: "pps-berbasis-ai.firebaseapp.com",
-          projectId: "pps-berbasis-ai",
-          storageBucket: "pps-berbasis-ai.firebaseapp.com",
-          messagingSenderId: "276221080937",
-          appId: "1:276221080937:web:e28faaae7b362ea4d179f8"
+          apiKey: "GANTI_DENGAN_API_KEY_ANDA",
+          authDomain: "GANTI_DENGAN_AUTH_DOMAIN_ANDA",
+          projectId: "GANTI_DENGAN_PROJECT_ID_ANDA",
+          storageBucket: "GANTI_DENGAN_STORAGE_BUCKET_ANDA",
+          messagingSenderId: "GANTI_DENGAN_MESSAGING_SENDER_ID_ANDA",
+          appId: "GANTI_DENGAN_APP_ID_ANDA"
         };
         // ==================================================================
 
@@ -54,7 +56,7 @@
             const db = getFirestore(app);
 
             // Make services available globally for the React script
-            window.firebaseServices = { auth, db, onAuthStateChanged, signInAnonymously, doc, getDoc, setDoc, signInWithCustomToken };
+            window.firebaseServices = { auth, db, onAuthStateChanged, signInAnonymously, doc, getDoc, setDoc };
             window.isFirebaseConfigured = true;
         } catch (e) {
             console.error("Firebase initialization failed:", e);
@@ -66,14 +68,13 @@
     <script type="text/babel">
         const { useState, useCallback, useEffect, useRef } = React;
         
-        // Helper component to render Lucide icons safely with React
         const Icon = ({ name, className, size = 24 }) => {
             const ref = useRef(null);
             useEffect(() => {
                 if (ref.current) {
                     const iconNode = lucide.icons[name];
                     if (iconNode) {
-                        ref.current.innerHTML = ''; // Clear previous icon
+                        ref.current.innerHTML = '';
                         const svgElement = lucide.createIcons({ icons: [[name, {}]] })[0];
                         if (svgElement) {
                             svgElement.setAttribute('class', className || '');
@@ -84,7 +85,6 @@
                     }
                 }
             }, [name, className, size]);
-
             return <span ref={ref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size }} />;
         };
 
@@ -128,19 +128,14 @@
                 const checkFirebase = setInterval(() => {
                     if (window.isFirebaseConfigured && window.firebaseServices) {
                         clearInterval(checkFirebase);
-                        const { auth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } = window.firebaseServices;
+                        const { auth, onAuthStateChanged, signInAnonymously } = window.firebaseServices;
                         
                         const unsubscribe = onAuthStateChanged(auth, async (user) => {
                             if (user) {
                                 setUserId(user.uid);
                             } else {
                                 try {
-                                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                                    if (initialAuthToken) {
-                                      await signInWithCustomToken(auth, initialAuthToken);
-                                    } else {
-                                      await signInAnonymously(auth);
-                                    }
+                                    await signInAnonymously(auth);
                                 } catch (authError) {
                                     console.error("Sign-in failed:", authError);
                                     if (authError.message && authError.message.includes('api-key-not-valid')) {
@@ -155,7 +150,7 @@
                         return () => unsubscribe();
                     } else if (window.isFirebaseConfigured === false) {
                         clearInterval(checkFirebase);
-                        setModalMessage({ message: "Konfigurasi Firebase salah atau gagal dimuat. Fitur penyimpanan tidak akan berfungsi.", type: 'error' });
+                        setModalMessage({ message: "Konfigurasi Firebase salah atau gagal dimuat.", type: 'error' });
                         setIsAuthReady(true);
                     }
                 }, 100);
