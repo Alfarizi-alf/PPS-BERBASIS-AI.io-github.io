@@ -29,23 +29,23 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Firebase Libraries (Module) -->
+    <!-- Firebase Libraries -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         // ==================================================================
-        // === PENTING: GANTI SELURUH BLOK DI BAWAH INI DENGAN MILIK ANDA ===
+        // === LANGKAH 2: TEMPEL KONFIGURASI FIREBASE ANDA DI SINI ===
         // ==================================================================
-        // Salin konfigurasi dari dashboard Firebase Anda dan tempel di sini.
+        // Ganti bagian di bawah ini dengan objek firebaseConfig yang Anda salin dari Firebase Console.
         const firebaseConfig = {
-          apiKey: "GANTI_DENGAN_API_KEY_ANDA",
-          authDomain: "GANTI_DENGAN_AUTH_DOMAIN_ANDA",
-          projectId: "GANTI_DENGAN_PROJECT_ID_ANDA",
-          storageBucket: "GANTI_DENGAN_STORAGE_BUCKET_ANDA",
-          messagingSenderId: "GANTI_DENGAN_MESSAGING_SENDER_ID_ANDA",
-          appId: "GANTI_DENGAN_APP_ID_ANDA"
+          apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+          authDomain: "nama-proyek-anda.firebaseapp.com",
+          projectId: "nama-proyek-anda",
+          storageBucket: "nama-proyek-anda.appspot.com",
+          messagingSenderId: "1234567890",
+          appId: "1:1234567890:web:abcdef1234567890"
         };
         // ==================================================================
 
@@ -65,125 +65,58 @@
     
     <!-- React Application Script -->
     <script type="text/babel">
-        const { useState, useCallback, useEffect, useRef } = React;
+        const { useState, useCallback, useEffect } = React;
         
+        // Helper component to render Lucide icons
         const Icon = ({ name, className, size = 24 }) => {
-            const ref = useRef(null);
             useEffect(() => {
-                if (ref.current) {
-                    const iconNode = lucide.icons[name];
-                    if (iconNode) {
-                        ref.current.innerHTML = '';
-                        const svgElement = lucide.createIcons({ icons: [[name, {}]] })[0];
-                        if (svgElement) {
-                            svgElement.setAttribute('class', className || '');
-                            svgElement.setAttribute('width', size);
-                            svgElement.setAttribute('height', size);
-                            ref.current.appendChild(svgElement);
-                        }
-                    }
-                }
-            }, [name, className, size]);
-            return <span ref={ref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size }} />;
+                lucide.createIcons();
+            }, []);
+            return <i data-lucide={name} className={className} style={{ width: size, height: size }} />;
         };
 
         const MessageModal = ({ message, type, onClose }) => {
           if (!message) return null;
           const bgColor = type === 'error' ? 'bg-red-800' : 'bg-blue-800';
-          const textColor = type === 'error' ? 'text-red-100' : 'text-blue-100';
           return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className={`rounded-lg shadow-xl p-6 border ${bgColor} max-w-sm w-full mx-auto animate-fade-in`}>
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className={`text-lg font-bold ${textColor}`}>Pesan</h3>
-                    <button onClick={onClose} className="text-white hover:text-gray-300">
-                        <Icon name="x-circle" className="w-6 h-6" />
-                    </button>
-                </div>
-                <p className={`text-sm ${textColor} mb-4`}>{message}</p>
-                <div className="text-right">
-                    <button onClick={onClose} className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-500 transition-colors duration-200">Tutup</button>
-                </div>
+                <h3 className={`text-lg font-bold`}>Pesan</h3>
+                <p className={`text-sm my-4`}>{message}</p>
+                <button onClick={onClose} className="px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-500">Tutup</button>
               </div>
             </div>
           );
         };
 
         function App() {
-            const [apiKey, setApiKey] = useState('');
-            const [rawData, setRawData] = useState(null);
-            const [groupedData, setGroupedData] = useState(null);
-            const [fileName, setFileName] = useState('');
-            const [isProcessingFile, setIsProcessingFile] = useState(false);
             const [modalMessage, setModalMessage] = useState({ message: '', type: '' });
-            const [userId, setUserId] = useState(null);
             const [isAuthReady, setIsAuthReady] = useState(false);
-            
-            useEffect(() => {
-                lucide.createIcons();
-            });
+            const [userId, setUserId] = useState(null);
 
             useEffect(() => {
-                const checkFirebase = setInterval(() => {
-                    if (window.isFirebaseConfigured && window.firebaseServices) {
-                        clearInterval(checkFirebase);
-                        const { auth, onAuthStateChanged, signInAnonymously } = window.firebaseServices;
-                        
-                        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-                            if (user) {
-                                setUserId(user.uid);
-                            } else {
-                                try {
-                                    await signInAnonymously(auth);
-                                } catch (authError) {
-                                    console.error("Sign-in failed:", authError);
-                                    if (authError.message && authError.message.includes('api-key-not-valid')) {
-                                        setModalMessage({ message: "Kunci API Firebase tidak valid. Harap periksa kembali konfigurasi Anda di file index.html.", type: 'error' });
-                                    } else {
-                                        setModalMessage({ message: `Gagal otentikasi Firebase: ${authError.message}`, type: 'error' });
-                                    }
-                                }
-                            }
-                            setIsAuthReady(true);
-                        });
-                        return () => unsubscribe();
-                    } else if (window.isFirebaseConfigured === false) {
-                        clearInterval(checkFirebase);
-                        setModalMessage({ message: "Konfigurasi Firebase salah atau gagal dimuat.", type: 'error' });
-                        setIsAuthReady(true);
-                    }
-                }, 100);
-            }, []);
-
-            const onDrop = useCallback((acceptedFiles) => {
-                const file = acceptedFiles[0];
-                if (!file) return;
-                setFileName(file.name);
-                setIsProcessingFile(true);
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const workbook = XLSX.read(event.target.result, { type: 'binary' });
-                        const sheetName = workbook.SheetNames[0];
-                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                        setRawData(jsonData);
-                        // Dummy processing for now, replace with your actual processData function
-                        setGroupedData({ "File Diproses": { title: "File Diproses", items: jsonData } });
-                    } catch (e) {
-                        setModalMessage({ message: `Gagal memproses file Excel: ${e.message}`, type: 'error' });
-                    } finally {
-                        setIsProcessingFile(false);
-                    }
-                };
-                reader.readAsBinaryString(file);
-            }, []);
-
-            const handleFileChange = (e) => {
-                if (e.target.files) {
-                    onDrop(Array.from(e.target.files));
+                if (!window.isFirebaseConfigured) {
+                    setModalMessage({ message: "Konfigurasi Firebase tidak ditemukan atau salah. Fitur penyimpanan data tidak akan berfungsi.", type: 'error' });
+                    setIsAuthReady(true); // Mark as ready to show the rest of the app
+                    return;
                 }
-            };
 
+                const { auth, onAuthStateChanged, signInAnonymously } = window.firebaseServices;
+                const unsubscribe = onAuthStateChanged(auth, user => {
+                    if (user) {
+                        setUserId(user.uid);
+                        console.log("Authenticated user:", user.uid);
+                    } else {
+                        signInAnonymously(auth).catch(err => console.error("Anonymous sign-in failed:", err));
+                    }
+                    setIsAuthReady(true);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            // ... (Sisa logika aplikasi Anda akan ada di sini)
+            // Untuk saat ini, kita hanya akan menampilkan pesan loading atau status
+            
             return (
                 <div>
                     <MessageModal 
@@ -197,43 +130,15 @@
                     </header>
 
                     {!isAuthReady ? (
-                        <div className="text-center flex items-center justify-center gap-2">
-                            <Icon name="loader-circle" className="animate-spin" />
-                            <span>Menghubungkan ke layanan...</span>
+                        <div className="text-center">
+                            <p>Menghubungkan ke layanan...</p>
                         </div>
                     ) : (
-                        <div>
-                            <div className="bg-slate-800 rounded-xl p-6 mb-8 shadow-lg">
-                                <p className="text-green-400 flex items-center gap-2">
-                                    <Icon name="check-circle" />
-                                    {userId ? `Terhubung! Sesi Anda aman.` : "Koneksi berhasil, menunggu autentikasi..."}
-                                </p>
-                            </div>
-                            <div className="bg-slate-800 rounded-xl p-6 mb-8 shadow-lg">
-                                <label htmlFor="apiKey" className="block text-sm font-medium text-slate-300 mb-2">Kunci API Google AI</label>
-                                <input id="apiKey" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="Masukkan Kunci API Anda di sini..." className="w-full bg-slate-700 border rounded-md px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 border-slate-600 focus:ring-cyan-500" />
-                            </div>
-                             {!groupedData && (
-                                <div className="flex flex-col items-center justify-center gap-4">
-                                    <div className="w-full p-10 border-2 border-dashed rounded-xl transition-all duration-300 cursor-pointer hover:border-cyan-500 hover:bg-slate-800 border-slate-600">
-                                        <input type="file" accept=".xlsx, .xls" onChange={handleFileChange} className="hidden" id="file-upload" />
-                                        <label htmlFor="file-upload" className="flex flex-col items-center justify-center text-center cursor-pointer">
-                                            {isProcessingFile ? (
-                                                <React.Fragment>
-                                                    <Icon name="loader-circle" className="w-12 h-12 text-cyan-500 mb-4 animate-spin" />
-                                                    <p className="text-lg font-semibold text-slate-300">Memproses file...</p>
-                                                </React.Fragment>
-                                            ) : (
-                                                <React.Fragment>
-                                                    <Icon name="upload-cloud" className="w-12 h-12 text-slate-500 mb-4" />
-                                                    <p className="text-lg font-semibold text-slate-300">Klik untuk mengunggah file .xlsx</p>
-                                                </React.Fragment>
-                                            )}
-                                        </label>
-                                    </div>
-                                </div>
-                            )}
-                            {groupedData && <div className="text-green-400 p-4 bg-slate-800 rounded-lg">File "{fileName}" berhasil diproses! Silakan lanjutkan dengan fitur AI.</div>}
+                        <div className="bg-slate-800 rounded-xl p-6 mb-8 shadow-lg">
+                            <p className="text-green-400">
+                                {userId ? `Terhubung! User ID Anda: ${userId}` : "Koneksi berhasil, menunggu autentikasi..."}
+                            </p>
+                            {/* Di sini Anda akan meletakkan sisa UI aplikasi Anda, seperti input Kunci API, area unggah file, dll. */}
                         </div>
                     )}
                 </div>
